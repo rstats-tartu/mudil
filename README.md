@@ -15,5 +15,5 @@
 # Küsimused
 
 1. kasvu erinevused sugude ja asukohtade vahel
-2. introduktsiooniaasta mõju sellele.
+2. introduktsiooniaasta mõju sellele
 
