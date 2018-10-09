@@ -21,6 +21,5 @@ fit2 <- brm(bf(TL ~ Linf * (1 - exp(-K * (age - t0))),
             iter = 2400, 
             control = list(adapt_delta = 0.999, max_treedepth = 13))
 write_rds(fit2, "output/von_bertalanffy_student_2.rds")
-
 summary(fit2)
 plot(marginal_effects(fit2), points = TRUE)
