@@ -1,0 +1,575 @@
+---
+title: "mudil"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(brms)
+library(broom)
+```
+
+unikaalse kalanumbri pean ise tekitama. TL-i viskan välja ja kasutan ümberarvutatud andmeid. Samas TL ei võrdu otoliidi pealt arvutatud pikkusega ja seda saaks korrekteerida kasutades mõõdetud TL-i. Preagu ma aga ei tee seda.
+
+NB! melt() töötas siin valesti, pidin kasutama gather().
+```{r}
+mudil <- read_csv("~/Downloads/mudil/output/andmed.csv")
+mudil <- mudil %>% mutate(nr = 1:nrow(mudil))
+ml <- mudil %>% select(-TL, -TW) %>% 
+  gather(key = age, value = TL_est, "0":"8" ) %>% drop_na()
+ml$age <- as.numeric(ml$age)
+ml$nr <- as.factor(ml$nr)
+ml$Sex <- as.factor(ml$Sex)
+```
+
+```{r}
+ggplot(ml, aes(age, TL_est, group=nr)) + 
+  geom_line(alpha=0.3)+ 
+  facet_grid(Location~Sex)+ ggthemes::theme_tufte()
+```
+
+```{r}
+filter(ml, Sex == "0", Location =="Saarnaki") %>% arrange(as.numeric(nr))
+```
+
+nr 212 on ilmselt vale, sest pikkus langeb ajas 2 korda - viskan tabelist välja.
+
+```{r}
+ml1 <- ml %>% filter(nr != "212")
+```
+
+Otsin logistilisele kasvufunktsioonile mõistlikke parameetriväärtusi - priorite määramiseks! Funktsiooni avaldis on pärit paketist growthmodels.
+
+```{r}
+logistic <- function(t, b, a, k) {
+  y = a/(1 + b * exp(-k * t))
+  y
+}
+
+time = seq(0,8, length.out = 100)
+beta = 10
+alpha = 200
+kappa = 1
+ll <- logistic(time, beta, alpha, kappa)
+plot(time, ll)
+```
+
+a - upper asymtote
+b - growth range
+k - growth rate
+```{r}
+get_prior(bf(TL_est ~ Sex + a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr), k ~ 1+ (1|Location), b~ 1, nl = TRUE),
+              data = ml1)
+```
+
+
+```{r}
+prior <- prior(student_t(3, 100, 50), nlpar = "b", lb = 0) +
+  prior(student_t(3, 1, 1), nlpar = "k", lb = 0) +
+  prior(student_t(3, 100, 50), nlpar = "a", lb = 0)
+```
+
+Seda "a" pririt peaks tegelikult tõstma 150, 50 peale.
+
+lihtne shrinkage mudel indiviidi kaupa. Ainus prediktor on vanus.
+```{r eval=FALSE}
+mud_m1 <- brm(bf(TL_est ~ a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr), 
+                 k ~ 1 + (1|nr), 
+                 b~ 1, nl = TRUE),
+              data = ml1, 
+              prior = prior,
+              chains = 3,
+              cores = 3,
+              iter = 2400, 
+              control = list(adapt_delta = 0.999, max_treedepth = 13))
+write_rds(mud_m1, "mud_m1.rds")
+```
+
+muudan eelmise mudeli "b" priorit kuna "b" posteerior on sellest suht kaugel.
+```{r eval=FALSE}
+prior1 <- prior(student_t(3, 10, 20), nlpar = "b", lb = 0) +
+  prior(student_t(3, 1, 1), nlpar = "k", lb = 0) +
+  prior(student_t(3, 100, 50), nlpar = "a", lb = 0)
+
+mud_m1.1 <- brm(bf(TL_est ~ a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr), 
+                 k ~ 1 + (1|nr), 
+                 b ~ 1, nl = TRUE),
+              data = ml1, 
+              prior = prior1,
+              chains = 3,
+              cores = 3,
+              iter = 2400, 
+              control = list(adapt_delta = 0.95))
+write_rds(mud_m1.1, "mud_m1.1.rds")
+```
+113 sec. Tulemus on täpselt sama, mis mud_m1-ga, mis näitab et b priori muutmine ei muutnud midagi!
+
+```{r}
+mud_m1 <- read_rds("mud_m1.rds")
+```
+
+3-tasemeline mudel- nii indiviid kui lokatsioon, aga ikka veel on vanus ainus prediktor.
+```{r eval=FALSE}
+mud_m2 <- brm(bf(TL_est ~ a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr) + (1|Location), 
+                 k ~ 1 + (1|nr) + (1|Location), 
+                 b~ 1, nl = TRUE),
+              data = ml1, 
+              prior = prior,
+              chains = 3,
+              cores = 3,
+              iter = 2400, 
+              control = list(adapt_delta = 0.999, max_treedepth = 13))
+write_rds(mud_m2, "mud_m2.rds")
+```
+
+1000 sec
+
+```{r}
+mud_m2 <- read_rds("mud_m2.rds")
+```
+
+ainult lokatsioon - kõik kalad mudeldatakse ühes potis ühe kalana.
+```{r eval=FALSE}
+mud_m3 <- brm(bf(TL_est ~ a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|Location), 
+                 k ~ 1 + (1|Location), 
+                 b~ 1, nl = TRUE),
+              data = ml1, 
+              prior = prior,
+              chains = 3,
+              cores = 3,
+              iter = 2400, 
+              control = list(adapt_delta = 0.95))
+write_rds(mud_m3, "mud_m3.rds")
+```
+56 sec
+
+```{r}
+mud_m3 <- read_rds("mud_m3.rds")
+```
+
+```{r}
+tidy(mud_m1) %>% head()
+```
+
+```{r}
+tidy(mud_m2)%>% head()
+```
+
+```{r}
+plot(mud_m2, pars = "b_")
+```
+
+
+```{r}
+mud_m1
+```
+
+```{r}
+mud_m2
+```
+
+m1 ennustus keskmisele kalale 
+```{r}
+plot(marginal_effects(mud_m1), points =TRUE)
+```
+
+sama 2. mudelile
+```{r}
+plot(marginal_effects(mud_m2), points =TRUE)
+```
+
+Nagu näha, lokatsioonide eraldi modelleerimine annab tunduvalt laiema veahinnangu. See on ka ausam veahinnang?
+
+```{r}
+plot(marginal_effects(mud_m3), points =TRUE)
+```
+
+Siin on ainult lokatsioon ja veapiirid on veel laiemad kui lokatsioon + nr mudelil m2.
+
+```{r}
+waic(mud_m1, mud_m2, mud_m3)
+```
+
+Lokatsiooniga mudel on sama hea kui mittelokatsiooniga mudel (SE_diff > WAIC_diff). Ilma idiviiditeta mudel jääb kõvasti alla.
+
+```{r}
+gridExtra::grid.arrange(pp_check(mud_m1), pp_check(mud_m2), pp_check(mud_m3), nrow = 3)
+```
+
+m3 ei suuda ka posterior predictive checki auga läbida! Siit on näha ka shrinkage, mis antud juhul näitab mudeli ebatäiuslikkust (ma kahtlustan).
+
+Vaatame üksikuid kalasid m1-st. Piisab ühest mõõdetud pikkusest, et modelleerida kogu kasvukõver. Veapiiride laius sõltub muidugi andmepunktide arvust.
+```{r }
+conditions <- data.frame(nr = unique(ml1$nr))
+rownames(conditions) <- unique(ml1$nr)
+conditions <- sample_n(conditions, 21)
+mar_eff_plot <- marginal_effects(
+  mud_m1, conditions = conditions, 
+  re_formula = NULL, method = "predict"
+)
+plot(mar_eff_plot, ncol = 7, points = TRUE)
+```
+
+
+
+
+
+**introduktsiooniaasta mõju keskmisele kasvule**
+
+```{r}
+ml1 %>% count(Introduction)
+```
+
+```{r eval=FALSE}
+prior <- prior(student_t(6, 10, 10), nlpar = "b", lb = 0) +
+  prior(student_t(6, 1, 1), nlpar = "k", lb = 0) +
+  prior(student_t(6, 100, 50), nlpar = "a", lb = 0)
+
+mud_m3_introd <- brm(bf(TL_est ~ a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr)+ (1|Introduction), 
+                 k ~ 1 + (1|nr)+ (1|Introduction), 
+                 b~ 1, nl = TRUE),
+              data = ml1, 
+              prior = prior,
+              chains = 1,
+              cores = 3,
+              iter = 2000, 
+              control = list(adapt_delta = 0.95, max_treedepth = 13))
+write_rds(mud_m3_introd, "mud_m3_introd.rds")
+```
+
+240 sec
+```{r}
+mud_m3_introd <- read_rds("mud_m3_introd.rds")
+```
+
+See mudel on sama hea kui ennist parim mudel m1!
+```{r}
+waic(mud_m1, mud_m2, mud_m3, mud_m3_introd)
+```
+
+
+```{r}
+mud_m3_introd
+```
+
+Sellest pildist tundub, et 2005 introduktsiooniaasta kalad kasvavad aeglasema tempoga kui teised. Äkki see on Tallinna lahe saastatuse mõju?
+```{r}
+conditions <- data.frame(Introduction = unique(ml1$Introduction))
+rownames(conditions) <- unique(ml1$Introduction) %>% as.character()
+marginal_effects(mud_m3_introd, effects = "age", conditions = conditions, re_formula = NULL, method = "fitted")
+```
+
+Introduktsiooniaasta mõju kasvukiirusele:
+
+```{r}
+introd_m <- posterior_samples(mud_m3_introd) %>% select(contains("b_"), contains("Introduction"))
+names(introd_m)
+```
+
+```{r}
+ES_k_05.16 <- introd_m$`r_Introduction__k[2005,Intercept]` - introd_m$`r_Introduction__k[2013,Intercept]`
+rethinking::HPDI(ES_k_05.16, prob = 0.9)
+```
+
+Päris suur efekt kasvukiirusele, aga mida see tähendab? 
+
+```{r}
+ggplot(ml1, aes(age, TL_est))+ geom_line(aes(group=nr))+facet_grid(Sex~Introduction)
+```
+
+```{r}
+ES_k_05.16 <- introd_m$`r_Introduction__k[2012,Intercept]` - introd_m$`r_Introduction__k[2016,Intercept]`
+rethinking::HPDI(ES_k_05.16, prob = 0.9)
+```
+
+Ka 2012 (Kihnu)--2016 (Matsalu/Saarnaki) on mõju olemas - seega pole vist Tallinna lahe spetsiifiline nähtus. Aga äkki on ka Pärnu laht saastatud?
+
+```{r}
+ES_k_05.16 <- introd_m$`r_Introduction__k[2013,Intercept]` - introd_m$`r_Introduction__k[2016,Intercept]`
+rethinking::HPDI(ES_k_05.16, prob = 0.9)
+```
+
+Isegi 2013 (Vilsandi) on see tõsi
+
+```{r}
+ES_k_05.16 <- introd_m$`r_Introduction__k[2013,Intercept]` - introd_m$`r_Introduction__k[2014,Intercept]`
+rethinking::HPDI(ES_k_05.16, prob = 0.9)
+```
+
+```{r}
+ES_k_05.16 <- introd_m$`r_Introduction__k[2012,Intercept]` - introd_m$`r_Introduction__k[2014,Intercept]`
+rethinking::HPDI(ES_k_05.16, prob = 0.9)
+```
+ka 2012 ... 2014 on midagi.
+
+
+## Sex male/female versioon
+
+```{r}
+ml2 <- ml1 %>% filter(Sex != "3")
+ml2$Sex <- droplevels(ml2$Sex)
+```
+
+m4 - sugude kaupa indiviidid shrinkage mudelis
+
+```{r}
+prior1 <- prior(student_t(3, 10, 20), nlpar = "b", lb = 0) +
+  prior(student_t(3, 1, 1), nlpar = "k", lb = 0) +
+  prior(student_t(3, 150, 50), nlpar = "a", lb = 0)
+```
+
+```{r eval=FALSE}
+mud_m4 <- brm(bf(TL_est ~ Sex + a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr), 
+                 k ~ 1 + (1|nr), 
+                 b~ 1, nl = TRUE),
+              data = ml2, 
+              prior = prior1,
+              chains = 3,
+              cores = 3,
+              iter = 2400, 
+              control = list(adapt_delta = 0.95))
+write_rds(mud_m4, "mud_m4.rds")
+```
+76 sec
+
+divergent transitions at delta = 0.95
+m5 - sugude kaupa, indiviidid ja lokatsioon shrinkage mudelis
+```{r eval=FALSE}
+mud_m5 <- brm(bf(TL_est ~ Sex + a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr) + (1|Location), 
+                 k ~ 1 + (1|nr) + (1|Location), 
+                 b~ 1, nl = TRUE),
+              data = ml2, 
+              prior = prior1,
+              chains = 3,
+              cores = 3,
+              iter = 2000, 
+              control = list(adapt_delta = 0.99, max_treedepth = 13))
+write_rds(mud_m5, "mud_m5.rds")
+```
+300 sec
+
+m6 - sugude kaupa kõik punktid koos (1 tasandiline mudel)
+```{r eval=FALSE}
+mud_m6 <- brm(bf(TL_est ~ Sex + a/(1 + b * exp(-k * age)), 
+                 a + k + b ~ 1, nl = TRUE),
+              data = ml2, 
+              prior = prior1,
+              chains = 3,
+              cores = 3,
+              iter = 2400, 
+              control = list(adapt_delta = 0.95))
+write_rds(mud_m6, "mud_m6.rds")
+```
+6 sec
+
+
+m7 - sugude kaupa, indiviidid ja lokatsioon shrinkage mudelis, ka soo-spetsiifilised erinevused kasvus on modelleeritud lokatsiooni tasemel (shrinkage mudelis)
+```{r eval=FALSE}
+mud_m7 <- brm(bf(TL_est ~ Sex + a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr) + (Sex|Location), 
+                 k ~ 1 + (1|nr) + (Sex|Location), 
+                 b~ 1, nl = TRUE),
+              data = ml2, 
+              prior = prior1,
+              chains = 3,
+              cores = 3,
+              iter = 2000, 
+              control = list(adapt_delta = 0.99, max_treedepth = 13))
+write_rds(mud_m7, "mud_m7.rds")
+```
+600 sec
+
+m8 - lisan eelmisesse mudelisse ka küpsusklassi e fecundity
+```{r eval=FALSE}
+mud_m8 <- brm(bf(TL_est ~ Sex + fecundity + a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr) + (Sex|Location), 
+                 k ~ 1 + (1|nr) + (Sex|Location), 
+                 b~ 1, nl = TRUE),
+              data = ml2, 
+              prior = prior1,
+              chains = 3,
+              cores = 3,
+              iter = 2000, 
+              control = list(adapt_delta = 0.99, max_treedepth = 13))
+write_rds(mud_m8, "mud_m8.rds")
+```
+650 sec
+
+m9 - mudeldan küpsusklassi mõju pikkusele erinevates lokatsioonides
+```{r eval=FALSE}
+mud_m9 <- brm(bf(TL_est ~ Sex + fecundity + a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr) + (fecundity|Location), 
+                 k ~ 1 + (1|nr) + (fecundity|Location), 
+                 b ~ 1, nl = TRUE),
+              data = ml2, 
+              prior = prior1,
+              chains = 1,
+              cores = 3,
+              iter = 2000, 
+              control = list(adapt_delta = 0.99, max_treedepth = 13))
+write_rds(mud_m9, "mud_m9.rds")
+```
+700 sec
+
+```{r eval=FALSE}
+mud_m10 <- brm(bf(TL_est ~ Sex*Introduction + a/(1 + b * exp(-k * age)), 
+                 a ~ 1 + (1|nr) + (Sex|Introduction), 
+                 k ~ 1 + (1|nr) + (Sex|Introduction), 
+                 b ~ 1, nl = TRUE),
+              data = ml2, 
+              prior = prior1,
+              chains = 1,
+              cores = 3,
+              iter = 2000, 
+              control = list(adapt_delta = 0.99, max_treedepth = 13))
+write_rds(mud_m10, "mud_m10.rds")
+```
+
+
+
+```{r}
+conditions <- data.frame(Location = (unique(ml2$Location)))
+rownames(conditions) <- unique(ml2$Location)
+marginal_effects(
+  mud_m9, conditions = conditions, effects = "fecundity", 
+  re_formula = NULL, method = "predict", ask = FALSE
+)
+```
+
+veapiirid on liiga suured, et midagi tarka arvata - võib õelda, et meil pole põhjust arvata, et oleks väga suur seos küpsusklassi ja pikkuse vahel.
+
+```{r}
+marginal_effects(
+  mud_m9, effects = "fecundity", 
+  re_formula = NA, method = "predict", ask = FALSE
+)
+```
+
+
+```{r}
+#mud_m10 <- read_rds("mud_m10.rds")
+mud_m9 <- read_rds("mud_m9.rds")
+mud_m8 <- read_rds("mud_m8.rds")
+mud_m7 <- read_rds("mud_m7.rds")
+mud_m6 <- read_rds("mud_m6.rds")
+mud_m5 <- read_rds("mud_m5.rds")
+mud_m4 <- read_rds("mud_m4.rds")
+```
+
+```{r}
+waic(mud_m4, mud_m5, mud_m6, mud_m7, mud_m8, mud_m9)
+```
+
+m4 ja m7/m9 on parimad.
+
+```{r}
+conditions <- expand.grid(Location = unique(ml2$Location))
+rownames(conditions) <- unique(ml2$Location)
+marginal_effects(
+  mud_m7, conditions = conditions, effects = "Sex", 
+  re_formula = NULL, method = "fitted", ask = FALSE
+)
+```
+
+```{r}
+conditions <- expand.grid(age = c(1, 2, 4, 6, 8))
+rownames(conditions) <- c("1 yr", "2 yrs", "4 yrs", "6 yrs", "8 yrs")
+marginal_effects(
+  mud_m7, conditions = conditions, effects = "Sex", 
+  re_formula = NA, method = "predict", ask = FALSE
+)
+```
+
+
+```{r}
+conditions <- expand.grid(Location = unique(ml2$Location))
+rownames(conditions) <- unique(ml2$Location)
+marginal_effects(
+  mud_m7, conditions = conditions, effects = "age", 
+  re_formula = NULL, method = "predict", ask = FALSE
+)
+```
+
+```{r eval=FALSE}
+conditions <- expand.grid(nr = unique(ml2$nr))
+rownames(conditions) <- unique(ml2$nr)
+conditions <- sample_n(conditions, 12)
+marginal_effects(
+  mud_m7, conditions = conditions, effects = "age", 
+  re_formula = NULL, method = "predict", ask = FALSE
+)
+```
+
+```{r}
+m7_df <- posterior_samples(mud_m7) %>% select(contains("b_"), contains("r_Loc"))
+names(m7_df)
+```
+
+```{r}
+ES_k_Kihnu <- m7_df$`r_Location__k[Kihnu,Sex1]`
+rethinking::HPDI(ES_k_Kihnu, prob = 0.9)
+```
+
+Me ei saa suure kindlusega õelda, et emaste-isaste kasvukiirus Kihnus erineb.
+
+```{r}
+ES_a_Kihnu <- m7_df$`r_Location__a[Kihnu,Sex1]`
+rethinking::HPDI(ES_a_Kihnu, prob = 0.9)
+```
+
+Aga kasvu asümptoot paistab küll erinevat ja päris palju (1-4 cm)!
+
+Kuidas oleks pikkuse erinevus 1 aastastel kaladel Kihnus?
+Sex + a/(1 + b * exp(-k * age)
+```{r}
+k_kihnu <- m7_df$b_k_Intercept + m7_df$`r_Location__k[Kihnu,Intercept]`
+a_kihnu <- m7_df$b_a_Intercept + m7_df$`r_Location__a[Kihnu,Intercept]`
+b_kihnu <- m7_df$b_b_Intercept
+Sex <- m7_df$`r_Location__k[Kihnu,Sex1]`
+age <- 1
+
+TL_sex0 <- a_kihnu/(1 + b_kihnu * exp(-k_kihnu * age))
+TL_sex1 <- Sex + a_kihnu/(1 + b_kihnu * exp(-k_kihnu * age))
+ES <- TL_sex0 - TL_sex1
+rethinking::HPDI(ES, prob = 0.9)
+```
+
+Üheaastastel ei paista pikkus palju erinevat.
+
+```{r}
+age <- 6
+
+TL_sex0_6yr <- a_kihnu/(1 + b_kihnu * exp(-k_kihnu * age))
+TL_sex1_6yr <- Sex + a_kihnu/(1 + b_kihnu * exp(-k_kihnu * age))
+ES1 <- TL_sex0_6yr - TL_sex1_6yr
+rethinking::HPDI(ES1, prob = 0.9)
+```
+
+Täpselt sama erinevus ka 6-aastatstel, tuleb mudeli struktuurist!
+
+Aga kas 6 aastaste sex0 kalade kasv erineb Kihnus ja Tallinna lahes?
+```{r}
+k_tal <- m7_df$b_k_Intercept + m7_df$`r_Location__k[Tallinna.laht,Intercept]`
+a_tal <- m7_df$b_a_Intercept + m7_df$`r_Location__a[Tallinna.laht,Intercept]`
+b_tal <- m7_df$b_b_Intercept
+TL_sex0_6yr_tl <- a_tal/(1 + b_tal * exp(-k_tal * age))
+ES2 <- TL_sex0_6yr - TL_sex0_6yr_tl
+rethinking::HPDI(ES2, prob = 0.9)
+
+```
+
+Tõepoolest erinevus on ehk olemas, kuid usalduspiirid on 0.1 cm ... 3 cm.
+
+
+```{r}
+tidy(mud_m9)
+```
+

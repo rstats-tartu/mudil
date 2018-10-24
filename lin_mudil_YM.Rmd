@@ -1,0 +1,201 @@
+---
+title: "R Notebook"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(brms)
+library(broom)
+```
+
+unikaalse kalanumbri pean ise tekitama. TL-i viskan välja ja kasutan ümberarvutatud andmeid. Samas TL ei võrdu otoliidi pealt arvutatud pikkusega ja seda saaks korrekteerida kasutades mõõdetud TL-i. Preagu ma aga ei tee seda.
+
+```{r}
+mudil <- read_csv("~/Downloads/mudil/output/andmed.csv")
+mudil <- mudil %>% mutate(nr = 1:nrow(mudil))
+ml <- mudil %>% select(-TL, -TW) %>% 
+  gather(key = age, value = TL_est, "0":"8" ) %>% drop_na()
+ml$age <- as.numeric(ml$age)
+ml$nr <- as.factor(ml$nr)
+ml$Sex <- as.factor(ml$Sex)
+```
+
+viskan välja outlieri
+```{r}
+ml1 <- ml %>% filter(nr != "212")
+```
+
+transformeerin vanuse ja TL_est log10 skaalasse. Hiljem kasutan ainult log_vanust.
+```{r}
+ml1 <- ml1 %>% mutate(log_TL = log10(TL_est), log_age=log10(age))
+```
+
+```{r}
+ggplot(ml1, aes(log_age, TL_est, group=nr)) + 
+  geom_line(alpha=0.3)+ 
+  facet_grid(Location~Sex)+ ggthemes::theme_tufte()
+```
+
+
+```{r}
+ggplot(ml1, aes(log_age, log_TL, group=nr)) + 
+  geom_line(alpha=0.3)+ 
+  facet_grid(Location~Sex)+ ggthemes::theme_tufte()
+```
+
+See log-log pilt ei tundu nii lineaarne kui eelmine.
+
+```{r}
+get_prior(TL_est~log_age + (1|nr), data = ml1)
+```
+
+Teen priorid kitsamaks. 
+```{r}
+prior <- c(prior(normal(95, 30), class="Intercept"),
+           prior(student_t(6, 0, 20), class="sd"),
+           prior(student_t(6, 0, 20), class="sigma"))
+```
+
+viskan välja juveniilid
+```{r}
+ml2 <- ml1 %>% filter(Sex != "3")
+ml2$Sex <- droplevels(ml2$Sex)
+```
+
+
+See mudel ei jooksnud ml1 andmete peal - ahelate initsiaalsed väärtused ei töötanud. Seda saab muidugi käsitsi settida, aga ma ei viitsinud ja läksin kohe ml2 peale.
+```{r eval=FALSE}
+mud_lin_m1 <- brm(TL_est~log_age + (1|nr), 
+                  data = ml2, 
+                  prior = prior, 
+                  cores = 4)
+write_rds(mud_lin_m1, "mud_lin_m1.rds")
+```
+
+m1 - lihtne shrinkage mudel kasvukõverad igale kalale. prediktorid peale aja puuduvad.
+
+```{r}
+conditions <- data.frame(nr= unique(ml2$nr))
+rownames(conditions) <- unique(ml2$nr)
+conditions <- slice(conditions, 1:20)
+plot(marginal_effects(mud_lin_m1, conditions = conditions, re_formula = NULL), points=TRUE)
+```
+
+3 tasemiline mudel - igale kalale ja igale lokatsioonile.
+```{r eval=FALSE}
+mud_lin_m2 <- brm(TL_est~log_age + (1|nr) + (1|Location), 
+                  data = ml2, 
+                  prior = prior, 
+                  cores = 4)
+write_rds(mud_lin_m2, "mud_lin_m2.rds")
+```
+
+```{r}
+conditions <- data.frame(nr= unique(ml2$Location))
+rownames(conditions) <- unique(ml2$Location)
+marginal_effects(mud_lin_m2, conditions = conditions, re_formula = NULL)
+```
+
+Toon sex-i mängu iseseisva muutujana.
+```{r eval=FALSE}
+mud_lin_m3 <- brm(TL_est~log_age + Sex + (1|nr) + (Sex|Location), 
+                  data = ml2, 
+                  prior = prior, 
+                  cores = 4)
+write_rds(mud_lin_m3, "mud_lin_m3.rds")
+```
+
+```{r}
+conditions <- expand.grid(nr= unique(ml2$Location), Sex= unique(ml2$Sex)) %>% as.data.frame()
+rownames1 <- data.frame(a= rep(unique(ml2$Location), each = 2), 
+                       b=rep(c("Sex0", "Sex1"), times=7)) %>% 
+  unite(c) 
+rownames1 <-  as.vector(rownames1$c)
+rownames(conditions) <- rownames1
+marginal_effects(mud_lin_m3, conditions = conditions, effects = "log_age", re_formula = NULL, ask =FALSE)
+```
+
+lokatsioon on asendatud introduktsiooniajaga (need ilmselt korreleeruvad tugevalt).
+```{r eval=FALSE}
+mud_lin_m4 <- brm(TL_est~log_age + Sex + (1|nr) + (Sex|Introduction), 
+                  data = ml2, 
+                  prior = prior, 
+                  cores = 4)
+write_rds(mud_lin_m4, "mud_lin_m4.rds")
+```
+
+kas sex mõjutab kasvusirge paiknemist? JAH!
+```{r eval=FALSE}
+mud_lin_m5 <- brm(TL_est~log_age:Sex + (1|nr) + (Sex|Introduction), 
+                  data = ml2, 
+                  prior = prior, 
+                  cores = 4)
+write_rds(mud_lin_m5, "mud_lin_m5.rds")
+```
+
+```{r eval=FALSE}
+mud_lin_m6 <- brm(TL_est~log_age*Sex + (1|nr) + (Sex|Introduction), 
+                  data = ml2, 
+                  prior = prior,
+                  chains = 3,
+                  cores = 4)
+write_rds(mud_lin_m6, "mud_lin_m6.rds")
+```
+
+```{r}
+mud_lin_m6 <- read_rds("mud_lin_m6.rds")
+mud_lin_m5 <- read_rds("mud_lin_m5.rds")
+mud_lin_m4 <- read_rds("mud_lin_m4.rds")
+mud_lin_m3 <- read_rds("mud_lin_m3.rds")
+mud_lin_m2 <- read_rds("mud_lin_m2.rds")
+mud_lin_m1 <- read_rds("mud_lin_m1.rds")
+mud_m7 <- read_rds("mud_m7.rds")
+```
+
+```{r}
+waic(mud_lin_m1, mud_lin_m2, mud_lin_m3, mud_lin_m4, mud_lin_m5,mud_lin_m6, mud_m7)
+```
+
+```{r}
+conditions <- expand.grid(nr= unique(ml2$Introduction), Sex=c("0", "1")) %>% as.data.frame()
+#rownames(conditions) <- unique(ml2$Introduction)
+marginal_effects(mud_lin_m6, effects="log_age", conditions = conditions, re_formula = NULL)
+```
+
+
+```{r}
+introd_m <- posterior_samples(mud_lin_m5) %>% select(contains("b_"), contains("Introduction"))
+names(introd_m)
+```
+
+
+```{r}
+mm <- introd_m$`r_Introduction[2005,Sex1]` - introd_m$`r_Introduction[2013,Sex1]` 
+rethinking::HPDI(mm, prob = 0.9)
+```
+Ok, efekt tõusule on olemas.
+
+```{r}
+rethinking::HPDI(introd_m$`r_Introduction[2005,Sex1]`, prob = 0.9)
+```
+
+```{r}
+rethinking::HPDI(introd_m$`r_Introduction[2013,Sex1]`, prob = 0.9)
+```
+
+```{r}
+rethinking::HPDI(introd_m$`b_log_age:Sex0`, prob = 0.9)
+```
+
+```{r}
+mud_lin_m6
+```
+
+```{r}
+introd_m1 <- posterior_samples(mud_lin_m4) %>% select(contains("b_"), contains("Introduction"))
+mm1 <- introd_m1$`r_Introduction[2005,Sex1]` - introd_m1$`r_Introduction[2013,Sex1]` 
+rethinking::HPDI(mm1, prob = 0.9)
+```
+
+
