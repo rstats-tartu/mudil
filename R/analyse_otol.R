@@ -94,13 +94,16 @@ plot(marginal_effects(fit1), points = TRUE)
 
 
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-             Linf + K + t0 ~ 1 + location + (1 | gr(id, by = location)), nl = TRUE),
+             Linf + K + t0 ~ 0 + location + (1 | gr(id, by = location)), 
+             sigma ~ age, nl = TRUE),
           data = mudil_ad)
 
+
 fit2 <- brm(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-               Linf + K + t0 ~ 1 + location + (1 | gr(id, by = location)), nl = TRUE),
+               Linf + K + t0 ~ 0 + location + (1 | gr(id, by = location)), 
+               sigma ~ age, nl = TRUE),
             data = mudil_ad,
-            family = gaussian(link = "log"),
+            family = gaussian(link = "identity"),
             prior = prior0,
             chains = 1,
             iter = 4000)
