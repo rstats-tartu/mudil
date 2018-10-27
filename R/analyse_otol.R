@@ -8,8 +8,7 @@ mudil
 #' Fish id: location + nr
 mudil %>% 
   group_by(nr, age, location) %>% 
-  summarise(N = n()) %>% 
-  filter(N > 1)
+  summarise(N = n())
 
 mudil_mod <- mudil %>% 
   mutate(location = str_replace_all(location, "\\s", "_"),
@@ -21,10 +20,6 @@ mudil_mod <- mudil %>%
          )) %>% 
   select(id, everything())
 
-ggplot(data = mudil_mod) +
-  geom_histogram(mapping = aes(x = tl), bins = 30) +
-  facet_wrap(~sex)
-
 #' Only adult fish
 mudil_ad <- filter(mudil_mod, sex != "juv")
 
@@ -34,14 +29,15 @@ mudil_ad %>%
 
 #' Individual growth curves
 ggplot(data = mudil_ad) +
-  geom_line(mapping = aes(x = age, y = tl, group = id, color = sex)) +
+  geom_line(mapping = aes(x = age, y = tl, group = id, color = sex), alpha = 2/3) +
   facet_wrap(~location) +
-  scale_color_viridis_d()
+  scale_color_viridis_d() +
+  labs(x = "Age (year)", y = "Total length (mm)")
 
 #' Average length at age in adults
 ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "ribbon", alpha = 0.3) +
-  geom_point() +
+  geom_point(position = position_jitter(width = 1/3)) +
   stat_summary(fun.y = mean, geom = "line", color = viridis(6)[6]) +
   facet_wrap(~location) +
   labs(x = "Age (year)", y = "Total length (mm)")
@@ -74,7 +70,6 @@ plot(marginal_effects(fit0, method = "fitted"), points = TRUE)
 
 
 #' Model with individual variance
-
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
              Linf + K + t0 ~ 1 + (1 | id), nl = TRUE),
           data = mudil_ad)
@@ -92,27 +87,30 @@ fit1 <- read_rds(fit_file)
 summary(fit1)
 plot(marginal_effects(fit1), points = TRUE)
 
-
+#' Model with individual variance and different sd per age
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-             Linf + K + t0 ~ 0 + location + (1 | gr(id, by = location)), 
+             Linf + K + t0 ~ 0 + location + (1 | id), 
              sigma ~ age, nl = TRUE),
           data = mudil_ad)
 
+kihnu <- prior(normal(200, 30), nlpar = "Linf") +
+  prior(normal(0.7, 0.2), nlpar = "K") +
+  prior(normal(0.5, 0.2), nlpar = "t0")
 
 fit2 <- brm(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-               Linf + K + t0 ~ 0 + location + (1 | gr(id, by = location)), 
+               Linf + K + t0 ~ 0 + location + (1 | id), 
                sigma ~ age, nl = TRUE),
             data = mudil_ad,
             family = gaussian(link = "identity"),
-            prior = prior0,
+            prior = kihnu,
             chains = 1,
             iter = 4000)
 fit_file <- "output/von_bertalanffy_normal_otol_2.rds"
 write_rds(fit2, fit_file)
 fit2 <- read_rds(fit_file)
 summary(fit2)
-plot(marginal_effects(fit2), points = TRUE)
+plot(marginal_effects(fit2), points = TRUE, ask = FALSE)
 
 cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars = "location")
-plot(marginal_effects(fit2, conditions = cond), points = TRUE)
+plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE)
 
