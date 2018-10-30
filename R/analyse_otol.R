@@ -92,12 +92,13 @@ fit2 <- brm(bf(tl ~ Linf * (1 - exp(-K * (age - t0))),
             iter = 4000)
 write_rds(fit2, "../output/von_bertalanffy_normal_otol_2.rds")
 
-#+ 
+#+ echo=FALSE
 fit2 <- read_rds("../output/von_bertalanffy_normal_otol_2.rds")
+
+#+ 
 summary(fit2)
-plot(marginal_effects(fit2), points = TRUE, ask = FALSE)
 
 #' Plot out fits for different locations
 cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars = "location")
 p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE)
-p[[1]]
+p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")

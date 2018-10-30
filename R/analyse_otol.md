@@ -271,7 +271,6 @@ write_rds(fit2, "../output/von_bertalanffy_normal_otol_2.rds")
 ```
 
 ``` r
-fit2 <- read_rds("../output/von_bertalanffy_normal_otol_2.rds")
 summary(fit2)
 ```
 
@@ -347,18 +346,12 @@ summary(fit2)
     ## is a crude measure of effective sample size, and Rhat is the potential 
     ## scale reduction factor on split chains (at convergence, Rhat = 1).
 
-``` r
-plot(marginal_effects(fit2), points = TRUE, ask = FALSE)
-```
-
-![](analyse_otol_files/figure-markdown_github/unnamed-chunk-13-1.png)![](analyse_otol_files/figure-markdown_github/unnamed-chunk-13-2.png)
-
 Plot out fits for different locations
 
 ``` r
 cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars = "location")
 p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE)
-p[[1]]
+p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-markdown_github/unnamed-chunk-14-1.png)
+![](analyse_otol_files/figure-markdown_github/unnamed-chunk-15-1.png)
