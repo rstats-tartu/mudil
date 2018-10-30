@@ -34,6 +34,21 @@ ggplot(data = mudil_ad) +
   scale_color_viridis_d() +
   labs(x = "Age (year)", y = "Total length (mm)")
 
+#' Weird fish in Saarnaki
+fish_id <- mudil_ad %>% 
+  filter(location == "Saarnaki") %>% 
+  mutate(ad = tl - tl[age == 1]) %>% 
+  filter(ad < 0) %>% 
+  pull(id)
+
+#' Drop this weird fish
+mudil_ad <- filter(mudil_ad, id != fish_id)
+ggplot(data = mudil_ad) +
+  geom_line(mapping = aes(x = age, y = tl, group = id, color = sex), alpha = 2/3) +
+  facet_wrap(~location) +
+  scale_color_viridis_d() +
+  labs(x = "Age (year)", y = "Total length (mm)")
+
 #' Average length at age in adults
 ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "ribbon", alpha = 0.3) +
