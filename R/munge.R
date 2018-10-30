@@ -4,7 +4,7 @@ library(readxl)
 (mudil <- read_excel("data/andmed.xlsx"))
 mudil <- mutate_at(mudil, "TW", parse_number)
 
-mudil_long <- select(mudil, nr, sex = Sex, location = Location, matches("\\d")) %>% 
+mudil_long <- select(mudil, nr, sex = Sex, location = Location, matches("\\d"), introduction = Introduction) %>% 
   gather(age, tl, matches("\\d")) %>% 
   drop_na()
 
