@@ -63,44 +63,6 @@ svTypical <- vbStarts(tl ~ age, data = mudil_ad)
 unlist(svTypical)
 
 # Set up prior with suggested starting values using normal distribution
-prior0 <- prior(normal(168, 30), nlpar = "Linf") +
-  prior(normal(0.68, 0.2), nlpar = "K") +
-  prior(normal(0.5, 0.2), nlpar = "t0")
-
-get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-             Linf + K + t0 ~ 1, nl = TRUE),
-          data = mudil_ad)
-
-fit0 <- brm(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-               Linf + K + t0 ~ 1, nl = TRUE),
-            data = mudil_ad,
-            family = gaussian(link = "log"),
-            prior = prior0,
-            chains = 4,
-            iter = 4000)
-write_rds(fit0, "output/von_bertalanffy_normal_otol.rds")
-fit0 <- read_rds("output/von_bertalanffy_normal_otol.rds")
-summary(fit0)
-plot(marginal_effects(fit0, method = "fitted"), points = TRUE)
-
-
-#' Model with individual variance
-get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-             Linf + K + t0 ~ 1 + (1 | id), nl = TRUE),
-          data = mudil_ad)
-
-fit1 <- brm(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-               Linf + K + t0 ~ 1 + (1 | id), nl = TRUE),
-            data = mudil_ad,
-            family = gaussian(link = "log"),
-            prior = prior0,
-            chains = 1,
-            iter = 4000)
-fit_file <- "output/von_bertalanffy_normal_otol_1.rds"
-write_rds(fit1, fit_file)
-fit1 <- read_rds(fit_file)
-summary(fit1)
-plot(marginal_effects(fit1), points = TRUE)
 
 #' Model with individual variance and different sd per age
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
@@ -108,6 +70,7 @@ get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))),
              sigma ~ age, nl = TRUE),
           data = mudil_ad)
 
+#' Wiki says that adult gobis can be between 150 and 200 mm long, let's take 200 as prior 
 kihnu <- prior(normal(200, 30), nlpar = "Linf") +
   prior(normal(0.7, 0.2), nlpar = "K") +
   prior(normal(0.5, 0.2), nlpar = "t0")
@@ -127,5 +90,5 @@ summary(fit2)
 plot(marginal_effects(fit2), points = TRUE, ask = FALSE)
 
 cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars = "location")
-plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE)
-
+p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE)
+p[[1]]
