@@ -1,8 +1,13 @@
+#' ---
+#' title: "Mudil"
+#' output: github_document
+#' date: "2018-10-30"
+#' ---
 
 library(tidyverse)
 library(viridis)
 library(brms)
-mudil <- read_csv("output/andmed_otoliit.csv")
+mudil <- read_csv("../output/andmed_otoliit.csv")
 mudil
 
 #' Fish id: location + nr
@@ -23,6 +28,7 @@ mudil_mod <- mudil %>%
 #' Only adult fish
 mudil_ad <- filter(mudil_mod, sex != "juv")
 
+#' Mean and sd of fish at different age
 mudil_ad %>% 
   group_by(age) %>% 
   summarise_at("tl", funs(mean, sd))
@@ -75,6 +81,7 @@ kihnu <- prior(normal(200, 30), nlpar = "Linf") +
   prior(normal(0.7, 0.2), nlpar = "K") +
   prior(normal(0.5, 0.2), nlpar = "t0")
 
+#+ eval=FALSE
 fit2 <- brm(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
                Linf + K + t0 ~ 0 + location + (1 | id), 
                sigma ~ age, nl = TRUE),
@@ -83,12 +90,14 @@ fit2 <- brm(bf(tl ~ Linf * (1 - exp(-K * (age - t0))),
             prior = kihnu,
             chains = 1,
             iter = 4000)
-fit_file <- "output/von_bertalanffy_normal_otol_2.rds"
-write_rds(fit2, fit_file)
-fit2 <- read_rds(fit_file)
+write_rds(fit2, "../output/von_bertalanffy_normal_otol_2.rds")
+
+#+ 
+fit2 <- read_rds("../output/von_bertalanffy_normal_otol_2.rds")
 summary(fit2)
 plot(marginal_effects(fit2), points = TRUE, ask = FALSE)
 
+#' Plot out fits for different locations
 cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars = "location")
 p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE)
 p[[1]]
