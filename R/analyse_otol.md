@@ -15,6 +15,7 @@ mudil <- read_csv("../output/andmed_otoliit.csv")
     ##   nr = col_integer(),
     ##   sex = col_integer(),
     ##   location = col_character(),
+    ##   introduction = col_integer(),
     ##   age = col_integer(),
     ##   tl = col_double()
     ## )
@@ -23,19 +24,19 @@ mudil <- read_csv("../output/andmed_otoliit.csv")
 mudil
 ```
 
-    ## # A tibble: 961 x 5
-    ##       nr   sex location        age    tl
-    ##    <int> <int> <chr>         <int> <dbl>
-    ##  1    38     3 Tallinna laht     0  29  
-    ##  2    40     3 Tallinna laht     0  33  
-    ##  3    42     3 Tallinna laht     0  39  
-    ##  4    48     3 Tallinna laht     0  46  
-    ##  5    54     3 Kihnu             1  35.3
-    ##  6    56     3 Kihnu             1  42.8
-    ##  7    63     3 Kihnu             1  44.4
-    ##  8    68     3 Kihnu             1  22.4
-    ##  9     6     0 Kihnu             1  66.5
-    ## 10     8     0 Kihnu             1  33.6
+    ## # A tibble: 961 x 6
+    ##       nr   sex location      introduction   age    tl
+    ##    <int> <int> <chr>                <int> <int> <dbl>
+    ##  1    38     3 Tallinna laht         2005     0  29  
+    ##  2    40     3 Tallinna laht         2005     0  33  
+    ##  3    42     3 Tallinna laht         2005     0  39  
+    ##  4    48     3 Tallinna laht         2005     0  46  
+    ##  5    54     3 Kihnu                 2012     1  35.3
+    ##  6    56     3 Kihnu                 2012     1  42.8
+    ##  7    63     3 Kihnu                 2012     1  44.4
+    ##  8    68     3 Kihnu                 2012     1  22.4
+    ##  9     6     0 Kihnu                 2012     1  66.5
+    ## 10     8     0 Kihnu                 2012     1  33.6
     ## # ... with 951 more rows
 
 Fish id: location + nr
@@ -155,6 +156,12 @@ Starting values for van bertalaffny model coefficients
 
 ``` r
 library(FSA)
+```
+
+    ## ## FSA v0.8.20. See citation('FSA') if used in publication.
+    ## ## Run fishR() for related website and fishR('IFAR') for related book.
+
+``` r
 svTypical <- vbStarts(tl ~ age, data = mudil_ad)
 unlist(svTypical)
 ```
