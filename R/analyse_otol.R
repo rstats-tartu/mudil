@@ -5,7 +5,7 @@
 #' output: github_document
 #' ---
 
-#'  ## Setup
+#' ## Setup
 #' Load libraries
 library(tidyverse)
 library(viridis)

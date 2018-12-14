@@ -3,7 +3,9 @@ Mudil growth curves
 rstats Tartu
 2018-10-30; (updated 2018-12-14)
 
-\#\# Setup Load libraries
+## Setup
+
+Load libraries
 
 ``` r
 library(tidyverse)
@@ -334,76 +336,73 @@ write_rds(fit2, here("output", "von_bertalanffy_normal_otol_2.rds"))
 summary(fit2)
 ```
 
-    ## Warning: There were 1 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help.
-    ## See http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
-
     ##  Family: gaussian 
     ##   Links: mu = identity; sigma = log 
     ## Formula: tl ~ Linf * (1 - exp(-K * (age - t0))) 
-    ##          Linf ~ location + (1 | id)
-    ##          K ~ location + (1 | id)
-    ##          t0 ~ location + (1 | id)
+    ##          Linf ~ 0 + location + (1 | id)
+    ##          K ~ 0 + location + (1 | id)
+    ##          t0 ~ 0 + location + (1 | id)
     ##          sigma ~ age
     ##    Data: mudil_ad (Number of observations: 791) 
-    ## Samples: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
-    ##          total post-warmup samples = 4000
+    ## Samples: 1 chains, each with iter = 4000; warmup = 2000; thin = 1;
+    ##          total post-warmup samples = 2000
     ## 
     ## Group-Level Effects: 
     ## ~id (Number of levels: 259) 
     ##                    Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
-    ## sd(Linf_Intercept)    35.41      2.92    29.91    41.40       1415 1.00
-    ## sd(K_Intercept)        0.10      0.01     0.08     0.12       1074 1.00
-    ## sd(t0_Intercept)       0.08      0.02     0.03     0.11        370 1.01
+    ## sd(Linf_Intercept)    31.19      2.53    26.24    36.24       1039 1.00
+    ## sd(K_Intercept)        0.10      0.01     0.08     0.12        875 1.00
+    ## sd(t0_Intercept)       0.08      0.02     0.04     0.11        397 1.00
     ## 
     ## Population-Level Effects: 
     ##                            Estimate Est.Error l-95% CI u-95% CI Eff.Sample
-    ## sigma_Intercept                2.20      0.11     1.98     2.42        856
-    ## Linf_Intercept               182.57      6.64   169.12   195.00       2545
-    ## Linf_locationKihnu            64.43     11.44    43.42    87.64       2524
-    ## Linf_locationKõiguste         24.32     10.14     5.13    45.05       2594
-    ## Linf_locationMatsalu          25.00     17.54     1.19    65.33       1640
-    ## Linf_locationSaarnaki         60.33     24.68    12.92   107.24       2122
-    ## Linf_locationTallinna_laht    10.48      7.35     0.47    27.75       2320
-    ## Linf_locationVilsandi         66.07     14.58    37.24    94.94       4186
-    ## K_Intercept                    0.38      0.02     0.34     0.42       4019
-    ## K_locationKihnu                0.02      0.02     0.00     0.07       4942
-    ## K_locationKõiguste             0.10      0.04     0.02     0.18       2987
-    ## K_locationMatsalu              0.30      0.11     0.09     0.53       1797
-    ## K_locationSaarnaki             0.14      0.10     0.01     0.37       1629
-    ## K_locationTallinna_laht        0.03      0.02     0.00     0.07       4155
-    ## K_locationVilsandi             0.07      0.04     0.00     0.16       4925
-    ## t0_Intercept                   0.40      0.03     0.34     0.47       3098
-    ## t0_locationKihnu               0.02      0.04    -0.05     0.11       4089
-    ## t0_locationKõiguste            0.02      0.04    -0.06     0.11       3597
-    ## t0_locationMatsalu             0.15      0.05     0.05     0.24       3099
-    ## t0_locationSaarnaki            0.08      0.05    -0.01     0.17       3612
-    ## t0_locationTallinna_laht       0.04      0.04    -0.04     0.12       4260
-    ## t0_locationVilsandi            0.06      0.05    -0.03     0.15       4890
-    ## sigma_age                     -0.09      0.04    -0.16    -0.00       1064
+    ## sigma_Intercept                2.16      0.11     1.94     2.38        574
+    ## Linf_locationKäsmu           205.93     12.64   182.20   232.12       1682
+    ## Linf_locationKihnu           242.31     12.40   219.56   268.79       2541
+    ## Linf_locationKõiguste        203.32      8.15   188.30   219.61       1184
+    ## Linf_locationMatsalu         185.61     13.94   161.29   215.72       1203
+    ## Linf_locationSaarnaki        205.30     17.50   173.32   241.72       1560
+    ## Linf_locationTallinna_laht   187.36      6.63   174.74   200.40       1031
+    ## Linf_locationVilsandi        230.16     12.74   206.43   256.05       2516
+    ## K_locationKäsmu                0.45      0.05     0.37     0.56       1932
+    ## K_locationKihnu                0.39      0.04     0.32     0.47       2165
+    ## K_locationKõiguste             0.48      0.04     0.41     0.56       1716
+    ## K_locationMatsalu              0.78      0.12     0.58     1.04       1390
+    ## K_locationSaarnaki             0.66      0.11     0.48     0.91       1426
+    ## K_locationTallinna_laht        0.40      0.03     0.35     0.45       1650
+    ## K_locationVilsandi             0.48      0.05     0.39     0.58       2525
+    ## t0_locationKäsmu               0.50      0.03     0.43     0.57       2196
+    ## t0_locationKihnu               0.41      0.03     0.35     0.48       2343
+    ## t0_locationKõiguste            0.42      0.03     0.36     0.48       2316
+    ## t0_locationMatsalu             0.56      0.04     0.49     0.64       1599
+    ## t0_locationSaarnaki            0.51      0.04     0.43     0.59       1854
+    ## t0_locationTallinna_laht       0.43      0.04     0.36     0.50       3072
+    ## t0_locationVilsandi            0.47      0.04     0.39     0.54       2707
+    ## sigma_age                     -0.07      0.04    -0.15     0.01        653
     ##                            Rhat
     ## sigma_Intercept            1.00
-    ## Linf_Intercept             1.00
+    ## Linf_locationKäsmu         1.00
     ## Linf_locationKihnu         1.00
     ## Linf_locationKõiguste      1.00
     ## Linf_locationMatsalu       1.00
     ## Linf_locationSaarnaki      1.00
     ## Linf_locationTallinna_laht 1.00
     ## Linf_locationVilsandi      1.00
-    ## K_Intercept                1.00
+    ## K_locationKäsmu            1.00
     ## K_locationKihnu            1.00
     ## K_locationKõiguste         1.00
     ## K_locationMatsalu          1.00
     ## K_locationSaarnaki         1.00
     ## K_locationTallinna_laht    1.00
     ## K_locationVilsandi         1.00
-    ## t0_Intercept               1.00
+    ## t0_locationKäsmu           1.00
     ## t0_locationKihnu           1.00
     ## t0_locationKõiguste        1.00
     ## t0_locationMatsalu         1.00
     ## t0_locationSaarnaki        1.00
     ## t0_locationTallinna_laht   1.00
     ## t0_locationVilsandi        1.00
-    ## sigma_age                  1.00
+    ## sigma_age                  1.01
     ## 
     ## Samples were drawn using sampling(NUTS). For each parameter, Eff.Sample 
     ## is a crude measure of effective sample size, and Rhat is the potential 
@@ -526,9 +525,9 @@ waic(fit2, fit21)
 ```
 
     ##                 WAIC    SE
-    ## fit2         5763.95 47.80
+    ## fit2         5754.11 46.19
     ## fit21        5791.09 47.46
-    ## fit2 - fit21  -27.13 10.28
+    ## fit2 - fit21  -36.98 10.95
 
 Model with location-specific t0 (more parameters) seems to be better, so
 let’s go on with it. Introduction year
