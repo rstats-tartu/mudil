@@ -7,6 +7,7 @@
 
 #' ## Setup
 #' Load libraries
+#+
 library(tidyverse)
 library(viridis)
 library(brms)
@@ -14,19 +15,24 @@ library(here)
 library(skimr)
 
 #' Set up stan-mc parameters
+#+
 chains <- 4
 control_pars <- list(adapt_delta = 0.999)
 
 #' Import data
 #' Import and munge dataset.
+#+
 mudil <- read_csv(here("output", "andmed_otoliit.csv"))
 skim(mudil)
 
 #' Fish id: location + nr
+#+
 mudil %>% 
   group_by(nr, age, location) %>% 
   summarise(N = n())
 
+#' Update sex categories.
+#+
 mudil_mod <- mudil %>% 
   mutate(location = str_replace_all(location, "\\s", "_"),
          id = str_c(location, nr, sep = "_"),
@@ -38,14 +44,17 @@ mudil_mod <- mudil %>%
   select(id, everything())
 
 #' Only adult fish
+#+
 mudil_ad <- filter(mudil_mod, sex != "juv")
 
 #' Mean and sd of fish at different age
+#+
 mudil_ad %>% 
   group_by(age) %>% 
   summarise_at("tl", funs(mean, sd))
 
 #' Individual growth curves
+#+
 ggplot(data = mudil_ad) +
   geom_line(mapping = aes(x = age, y = tl, group = id, color = sex), alpha = 2/3) +
   facet_wrap(~location) +
@@ -53,6 +62,7 @@ ggplot(data = mudil_ad) +
   labs(x = "Age (year)", y = "Total length (mm)")
 
 #' Weird fish in Saarnaki:
+#+
 fish_id <- mudil_ad %>% 
   filter(location == "Saarnaki") %>% 
   mutate(ad = tl - tl[age == 1]) %>% 
@@ -60,6 +70,7 @@ fish_id <- mudil_ad %>%
   pull(id)
 
 #' Drop this weird fish
+#+
 mudil_ad <- filter(mudil_ad, id != fish_id)
 ggplot(data = mudil_ad) +
   geom_line(mapping = aes(x = age, y = tl, group = id, color = sex), alpha = 2/3) +
@@ -68,6 +79,7 @@ ggplot(data = mudil_ad) +
   labs(x = "Age (year)", y = "Total length (mm)")
 
 #' Average length at age in adults
+#+
 ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "ribbon", alpha = 0.3) +
   geom_point(position = position_jitter(width = 1/3)) +
@@ -76,6 +88,7 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   labs(x = "Age (year)", y = "Total length (mm)")
 
 #' Growth curves per introduction year
+#+
 ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "ribbon", alpha = 0.3) +
   geom_point(position = position_jitter(width = 1/3)) +
@@ -87,6 +100,7 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
 
 #' ## Modeling
 #' Get reasonable starting values for van bertalaffny model coefficients.
+#+
 library(FSA)
 svTypical <- vbStarts(tl ~ age, data = mudil_ad)
 unlist(svTypical)
@@ -95,18 +109,22 @@ unlist(svTypical)
 
 #' First model, individual variance and different sd per age
 #' Total length modeled by van bertalanffy 
+#+
 vbgf_f <- tl ~ Linf * (1 - exp(-K * (age - t0)))
 
 #' van bertalanffy model coefficients can vary by location and we take individual differences into account as random effect.s
+#+
 vbgf_coefs_f <- Linf + K + t0 ~ location + (1 | id)
 
 #' This is how brms default priors look like:
+#+
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
              vbgf_coefs_f, 
              sigma ~ age, nl = TRUE),
           data = mudil_ad)
 
 #' We can set our own priors. Wiki says that adult gobis can be between 150 and 200 mm long, let's take 200 as a prior fot tl
+#+
 kihnu <- prior(normal(170, 35), nlpar = "Linf", lb = 0) +
   prior(normal(0.7, 0.2), nlpar = "K", lb = 0) +
   prior(normal(0.5, 0.2), nlpar = "t0")
@@ -135,8 +153,7 @@ cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars =
 p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE)
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 
-#' Model with same t0 for all locations
-#' Test if we can use common t0 for all locations
+#' Model with same t0 for all locations to test if we can use common t0 for all locations.
 vbgf_coefs_f <- Linf + K ~ location + (1 | id)
 
 #+ eval=FALSE
@@ -239,6 +256,7 @@ fit5 <- read_rds(here("output", "von_bertalanffy_normal_otol_5.rds"))
 summary(fit5)
 
 #' Plot out fits for different locations
+#+ fig.height=9
 cond <- make_conditions(expand.grid(sex = unique(mudil_ad$sex), location = unique(mudil_ad$location)), vars = c("location", "sex"))
 p <- plot(marginal_effects(fit5, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE, ncol = 2)
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")

@@ -92,6 +92,8 @@ mudil %>%
     ## 10     1     2 Kõiguste          1
     ## # ... with 951 more rows
 
+Update sex categories.
+
 ``` r
 mudil_mod <- mudil %>% 
   mutate(location = str_replace_all(location, "\\s", "_"),
@@ -140,7 +142,7 @@ ggplot(data = mudil_ad) +
   labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 Weird fish in Saarnaki:
 
@@ -166,7 +168,7 @@ ggplot(data = mudil_ad) +
   labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 Average length at age in adults
 
@@ -179,7 +181,7 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 Growth curves per introduction year
 
@@ -194,7 +196,7 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
        y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ## Modeling
 
@@ -417,10 +419,10 @@ p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
-Model with same t0 for all locations Test if we can use common t0 for
-all locations
+Model with same t0 for all locations to test if we can use common t0 for
+all locations.
 
 ``` r
 vbgf_coefs_f <- Linf + K ~ location + (1 | id)
@@ -515,7 +517,7 @@ p <- plot(marginal_effects(fit21, conditions = cond), points = TRUE, ask = FALSE
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 Compare models with location-specific t0 and common t0. Let’s use waic
 as loo complains about pareto.
@@ -606,7 +608,7 @@ p <- plot(marginal_effects(fit3, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
 
 Effect of location and sex Simple effects
 
@@ -717,7 +719,7 @@ p <- plot(marginal_effects(fit4, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
 
 With interaction
 
@@ -867,4 +869,4 @@ p <- plot(marginal_effects(fit5, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
