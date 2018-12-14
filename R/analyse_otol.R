@@ -9,7 +9,7 @@ library(viridis)
 library(brms)
 chains <- 4
 control_pars <- list(adapt_delta = 0.999)
-mudil <- read_csv("output/andmed_otoliit.csv")
+mudil <- read_csv("../output/andmed_otoliit.csv")
 mudil
 
 #' Fish id: location + nr
@@ -87,7 +87,7 @@ unlist(svTypical)
 vbgf_f <- tl ~ Linf * (1 - exp(-K * (age - t0)))
 vbgf_coefs_f <- Linf + K + t0 ~ location + (1 | id)
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
-             nl_coefs_formula, 
+             vbgf_coefs_f, 
              sigma ~ age, nl = TRUE),
           data = mudil_ad)
 
@@ -106,10 +106,10 @@ fit2 <- brm(bf(vbgf_f,
             chains = chains,
             iter = 2000)
 fit2 <- add_ic(fit2, ic = "waic")
-write_rds(fit2, "output/von_bertalanffy_normal_otol_2.rds")
+write_rds(fit2, "../output/von_bertalanffy_normal_otol_2.rds")
 
 #+ echo=FALSE
-fit2 <- read_rds("output/von_bertalanffy_normal_otol_2.rds")
+fit2 <- read_rds("../output/von_bertalanffy_normal_otol_2.rds")
 
 #+ 
 summary(fit2)
@@ -134,10 +134,10 @@ fit21 <- brm(bf(vbgf_f,
             chains = chains,
             iter = 2000)
 fit21 <- add_ic(fit21, ic = "waic")
-write_rds(fit21, "output/von_bertalanffy_normal_otol_21.rds")
+write_rds(fit21, "../output/von_bertalanffy_normal_otol_21.rds")
 
 #+ echo=FALSE
-fit21 <- read_rds("output/von_bertalanffy_normal_otol_21.rds")
+fit21 <- read_rds("../output/von_bertalanffy_normal_otol_21.rds")
 
 #+ 
 summary(fit21)
@@ -164,10 +164,10 @@ fit3 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit3, "output/von_bertalanffy_normal_otol_3.rds")
+write_rds(fit3, "../output/von_bertalanffy_normal_otol_3.rds")
 
 #+ echo=FALSE
-fit3 <- read_rds("output/von_bertalanffy_normal_otol_3.rds")
+fit3 <- read_rds("../output/von_bertalanffy_normal_otol_3.rds")
 
 #+ 
 summary(fit3)
@@ -190,10 +190,10 @@ fit4 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit4, "output/von_bertalanffy_normal_otol_4.rds")
+write_rds(fit4, "../output/von_bertalanffy_normal_otol_4.rds")
 
 #+ echo=FALSE
-fit4 <- read_rds("output/von_bertalanffy_normal_otol_4.rds")
+fit4 <- read_rds("../output/von_bertalanffy_normal_otol_4.rds")
 
 #+ 
 summary(fit4)
@@ -215,10 +215,10 @@ fit5 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit5, "output/von_bertalanffy_normal_otol_5.rds")
+write_rds(fit5, "../output/von_bertalanffy_normal_otol_5.rds")
 
 #+ echo=FALSE
-fit5 <- read_rds("output/von_bertalanffy_normal_otol_5.rds")
+fit5 <- read_rds("../output/von_bertalanffy_normal_otol_5.rds")
 
 #+ 
 summary(fit5)
