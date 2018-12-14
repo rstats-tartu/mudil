@@ -719,7 +719,7 @@ p <- plot(marginal_effects(fit4, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+<img src="analyse_otol_files/figure-gfm/unnamed-chunk-37-1.png" style="display: block; margin: auto;" />
 
 With interaction
 
@@ -869,4 +869,4 @@ p <- plot(marginal_effects(fit5, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
+<img src="analyse_otol_files/figure-gfm/unnamed-chunk-42-1.png" style="display: block; margin: auto;" />

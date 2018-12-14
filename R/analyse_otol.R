@@ -231,6 +231,7 @@ fit4 <- read_rds(here("output", "von_bertalanffy_normal_otol_4.rds"))
 summary(fit4)
 
 #' Plot out fits for different locations
+#+ fig.height=9, fig.width=4, fig.align='center'
 cond <- make_conditions(expand.grid(sex = unique(mudil_ad$sex), location = unique(mudil_ad$location)), vars = c("location", "sex"))
 p <- plot(marginal_effects(fit4, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE, ncol = 2)
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
@@ -256,7 +257,7 @@ fit5 <- read_rds(here("output", "von_bertalanffy_normal_otol_5.rds"))
 summary(fit5)
 
 #' Plot out fits for different locations
-#+ fig.height=9
+#+ fig.height=9, fig.width=4, fig.align='center'
 cond <- make_conditions(expand.grid(sex = unique(mudil_ad$sex), location = unique(mudil_ad$location)), vars = c("location", "sex"))
 p <- plot(marginal_effects(fit5, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE, ncol = 2)
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
