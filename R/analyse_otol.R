@@ -1,17 +1,26 @@
 #' ---
-#' title: "Mudil"
+#' title: Mudil growth curves
+#' author: rstats Tartu
+#' date: 2018-10-30; (updated `r Sys.Date()`)
 #' output: github_document
-#' date: "2018-10-30; updated(`r Sys.Date()`)"
 #' ---
 
+#'  ## Setup
+#' Load libraries
 library(tidyverse)
 library(viridis)
 library(brms)
 library(here)
+library(skimr)
+
+#' Set up stan-mc parameters
 chains <- 4
 control_pars <- list(adapt_delta = 0.999)
+
+#' Import data
+#' Import and munge dataset.
 mudil <- read_csv(here("output", "andmed_otoliit.csv"))
-mudil
+skim(mudil)
 
 #' Fish id: location + nr
 mudil %>% 
@@ -43,7 +52,7 @@ ggplot(data = mudil_ad) +
   scale_color_viridis_d() +
   labs(x = "Age (year)", y = "Total length (mm)")
 
-#' Weird fish in Saarnaki
+#' Weird fish in Saarnaki:
 fish_id <- mudil_ad %>% 
   filter(location == "Saarnaki") %>% 
   mutate(ad = tl - tl[age == 1]) %>% 
@@ -66,7 +75,7 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   facet_wrap(~location) +
   labs(x = "Age (year)", y = "Total length (mm)")
 
-#'
+#' Growth curves per introduction year
 ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "ribbon", alpha = 0.3) +
   geom_point(position = position_jitter(width = 1/3)) +
@@ -76,17 +85,18 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
        x = "Age (year)", 
        y = "Total length (mm)")
 
-
-#' Starting values for van bertalaffny model coefficients.
+#' ## Modeling
+#' Get reasonable starting values for van bertalaffny model coefficients.
 library(FSA)
 svTypical <- vbStarts(tl ~ age, data = mudil_ad)
 unlist(svTypical)
 
-# Set up prior with suggested starting values using normal distribution
+#' Set up prior with suggested starting values using normal distribution
 
 #' First model, individual variance and different sd per age
 #' Total length modeled by van bertalanffy 
 vbgf_f <- tl ~ Linf * (1 - exp(-K * (age - t0)))
+
 #' van bertalanffy model coefficients can vary by location and we take individual differences into account as random effect.s
 vbgf_coefs_f <- Linf + K + t0 ~ location + (1 | id)
 
@@ -147,7 +157,6 @@ fit21 <- read_rds(here("output", "von_bertalanffy_normal_otol_21.rds"))
 
 #+ 
 summary(fit21)
-
 
 #' Plot fits for different locations
 cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars = "location")

@@ -1,21 +1,29 @@
-Mudil
+Mudil growth curves
 ================
-taavi
-2018-10-30; updated(2018-12-14)
+rstats Tartu
+2018-10-30; (updated 2018-12-14)
+
+\#\# Setup Load libraries
 
 ``` r
 library(tidyverse)
 library(viridis)
 library(brms)
 library(here)
+library(skimr)
 ```
 
-    ## here() starts at /Users/taavi/Downloads/mudil
+Set up stan-mc parameters
 
 ``` r
 chains <- 4
 control_pars <- list(adapt_delta = 0.999)
-mudil <- read_csv("../output/andmed_otoliit.csv")
+```
+
+Import data Import and munge dataset.
+
+``` r
+mudil <- read_csv(here("output", "andmed_otoliit.csv"))
 ```
 
     ## Parsed with column specification:
@@ -29,23 +37,34 @@ mudil <- read_csv("../output/andmed_otoliit.csv")
     ## )
 
 ``` r
-mudil
+skim(mudil)
 ```
 
-    ## # A tibble: 961 x 6
-    ##       nr   sex location      introduction   age    tl
-    ##    <int> <int> <chr>                <int> <int> <dbl>
-    ##  1    38     3 Tallinna laht         2005     0  29  
-    ##  2    40     3 Tallinna laht         2005     0  33  
-    ##  3    42     3 Tallinna laht         2005     0  39  
-    ##  4    48     3 Tallinna laht         2005     0  46  
-    ##  5    54     3 Kihnu                 2012     1  35.3
-    ##  6    56     3 Kihnu                 2012     1  42.8
-    ##  7    63     3 Kihnu                 2012     1  44.4
-    ##  8    68     3 Kihnu                 2012     1  22.4
-    ##  9     6     0 Kihnu                 2012     1  66.5
-    ## 10     8     0 Kihnu                 2012     1  33.6
-    ## # ... with 951 more rows
+    ## Skim summary statistics
+    ##  n obs: 961 
+    ##  n variables: 6 
+    ## 
+    ## ── Variable type:character ────────────────────────────────────────────────────
+    ##  variable missing complete   n min max empty n_unique
+    ##  location       0      961 961   5  13     0        7
+    ## 
+    ## ── Variable type:integer ──────────────────────────────────────────────────────
+    ##      variable missing complete   n    mean    sd   p0  p25  p50  p75 p100
+    ##           age       0      961 961    2.17  1.28    0    1    2    3    8
+    ##  introduction       0      961 961 2011.78  3.76 2005 2012 2012 2014 2016
+    ##            nr       0      961 961   28.48 17.57    1   14   27   41   85
+    ##           sex       0      961 961    0.91  1.06    0    0    1    1    3
+    ##      hist
+    ##  ▇▇▃▂▁▁▁▁
+    ##  ▅▁▁▁▁▇▃▃
+    ##  ▇▇▇▇▅▂▁▁
+    ##  ▇▁▇▁▁▁▁▃
+    ## 
+    ## ── Variable type:numeric ──────────────────────────────────────────────────────
+    ##  variable missing complete   n  mean    sd    p0   p25   p50    p75 p100
+    ##        tl       0      961 961 96.03 48.07 11.79 51.31 94.54 134.46  212
+    ##      hist
+    ##  ▃▇▅▆▆▅▃▁
 
 Fish id: location + nr
 
@@ -119,9 +138,9 @@ ggplot(data = mudil_ad) +
   labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
-Weird fish in Saarnaki
+Weird fish in Saarnaki:
 
 ``` r
 fish_id <- mudil_ad %>% 
@@ -145,7 +164,7 @@ ggplot(data = mudil_ad) +
   labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 Average length at age in adults
 
@@ -158,7 +177,9 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
   labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+Growth curves per introduction year
 
 ``` r
 ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
@@ -171,9 +192,11 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
        y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
-Starting values for van bertalaffny model coefficients.
+## Modeling
+
+Get reasonable starting values for van bertalaffny model coefficients.
 
 ``` r
 library(FSA)
@@ -184,10 +207,7 @@ unlist(svTypical)
     ##        Linf           K          t0 
     ## 168.0135717   0.6837691   0.5048853
 
-``` r
-# Set up prior with suggested starting values using normal distribution
-```
-
+Set up prior with suggested starting values using normal distribution
 First model, individual variance and different sd per age Total length
 modeled by van bertalanffy
 
@@ -307,7 +327,7 @@ fit2 <- brm(bf(vbgf_f,
             chains = chains,
             iter = 2000)
 fit2 <- add_ic(fit2, ic = "waic")
-write_rds(fit2, "../output/von_bertalanffy_normal_otol_2.rds")
+write_rds(fit2, here("output", "von_bertalanffy_normal_otol_2.rds"))
 ```
 
 ``` r
@@ -398,7 +418,7 @@ p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
 Model with same t0 for all locations Test if we can use common t0 for
 all locations
@@ -418,7 +438,7 @@ fit21 <- brm(bf(vbgf_f,
             chains = chains,
             iter = 2000)
 fit21 <- add_ic(fit21, ic = "waic")
-write_rds(fit21, "../output/von_bertalanffy_normal_otol_21.rds")
+write_rds(fit21, here("output", "von_bertalanffy_normal_otol_21.rds"))
 ```
 
 ``` r
@@ -496,7 +516,7 @@ p <- plot(marginal_effects(fit21, conditions = cond), points = TRUE, ask = FALSE
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
 
 Compare models with location-specific t0 and common t0. Let’s use waic
 as loo complains about pareto.
@@ -526,7 +546,7 @@ fit3 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit3, "../output/von_bertalanffy_normal_otol_3.rds")
+write_rds(fit3, here("output", "von_bertalanffy_normal_otol_3.rds"))
 ```
 
 ``` r
@@ -587,7 +607,7 @@ p <- plot(marginal_effects(fit3, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
 
 Effect of location and sex Simple effects
 
@@ -604,7 +624,7 @@ fit4 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit4, "../output/von_bertalanffy_normal_otol_4.rds")
+write_rds(fit4, here("output", "von_bertalanffy_normal_otol_4.rds"))
 ```
 
 ``` r
@@ -698,7 +718,7 @@ p <- plot(marginal_effects(fit4, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
 
 With interaction
 
@@ -715,7 +735,7 @@ fit5 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit5, "../output/von_bertalanffy_normal_otol_5.rds")
+write_rds(fit5, here("output", "von_bertalanffy_normal_otol_5.rds"))
 ```
 
 ``` r
@@ -848,4 +868,4 @@ p <- plot(marginal_effects(fit5, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
