@@ -7,9 +7,10 @@
 library(tidyverse)
 library(viridis)
 library(brms)
+library(here)
 chains <- 4
 control_pars <- list(adapt_delta = 0.999)
-mudil <- read_csv("../output/andmed_otoliit.csv")
+mudil <- read_csv(here("output", "andmed_otoliit.csv"))
 mudil
 
 #' Fish id: location + nr
@@ -76,26 +77,31 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
        y = "Total length (mm)")
 
 
-#' Starting values for van bertalaffny model coefficients
+#' Starting values for van bertalaffny model coefficients.
 library(FSA)
 svTypical <- vbStarts(tl ~ age, data = mudil_ad)
 unlist(svTypical)
 
 # Set up prior with suggested starting values using normal distribution
 
-#' Model with individual variance and different sd per age
+#' First model, individual variance and different sd per age
+#' Total length modeled by van bertalanffy 
 vbgf_f <- tl ~ Linf * (1 - exp(-K * (age - t0)))
+#' van bertalanffy model coefficients can vary by location and we take individual differences into account as random effect.s
 vbgf_coefs_f <- Linf + K + t0 ~ location + (1 | id)
+
+#' This is how brms default priors look like:
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
              vbgf_coefs_f, 
              sigma ~ age, nl = TRUE),
           data = mudil_ad)
 
-#' Wiki says that adult gobis can be between 150 and 200 mm long, let's take 200 as a prior fot tl
+#' We can set our own priors. Wiki says that adult gobis can be between 150 and 200 mm long, let's take 200 as a prior fot tl
 kihnu <- prior(normal(170, 35), nlpar = "Linf", lb = 0) +
   prior(normal(0.7, 0.2), nlpar = "K", lb = 0) +
   prior(normal(0.5, 0.2), nlpar = "t0")
 
+#' Fit location model: 
 #+ eval=FALSE
 fit2 <- brm(bf(vbgf_f, 
                vbgf_coefs_f, 
@@ -106,10 +112,10 @@ fit2 <- brm(bf(vbgf_f,
             chains = chains,
             iter = 2000)
 fit2 <- add_ic(fit2, ic = "waic")
-write_rds(fit2, "../output/von_bertalanffy_normal_otol_2.rds")
+write_rds(fit2, here("output", "von_bertalanffy_normal_otol_2.rds"))
 
 #+ echo=FALSE
-fit2 <- read_rds("../output/von_bertalanffy_normal_otol_2.rds")
+fit2 <- read_rds(here("output", "von_bertalanffy_normal_otol_2.rds"))
 
 #+ 
 summary(fit2)
@@ -119,7 +125,7 @@ cond <- make_conditions(data.frame(location = unique(mudil_ad$location)), vars =
 p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE, plot = FALSE)
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 
-#' Model single t0 for all locations
+#' Model with same t0 for all locations
 #' Test if we can use common t0 for all locations
 vbgf_coefs_f <- Linf + K ~ location + (1 | id)
 
@@ -134,10 +140,10 @@ fit21 <- brm(bf(vbgf_f,
             chains = chains,
             iter = 2000)
 fit21 <- add_ic(fit21, ic = "waic")
-write_rds(fit21, "../output/von_bertalanffy_normal_otol_21.rds")
+write_rds(fit21, here("output", "von_bertalanffy_normal_otol_21.rds"))
 
 #+ echo=FALSE
-fit21 <- read_rds("../output/von_bertalanffy_normal_otol_21.rds")
+fit21 <- read_rds(here("output", "von_bertalanffy_normal_otol_21.rds"))
 
 #+ 
 summary(fit21)
@@ -164,10 +170,10 @@ fit3 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit3, "../output/von_bertalanffy_normal_otol_3.rds")
+write_rds(fit3, here("output", "von_bertalanffy_normal_otol_3.rds"))
 
 #+ echo=FALSE
-fit3 <- read_rds("../output/von_bertalanffy_normal_otol_3.rds")
+fit3 <- read_rds(here("output", "von_bertalanffy_normal_otol_3.rds"))
 
 #+ 
 summary(fit3)
@@ -190,10 +196,10 @@ fit4 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit4, "../output/von_bertalanffy_normal_otol_4.rds")
+write_rds(fit4, here("output", "von_bertalanffy_normal_otol_4.rds"))
 
 #+ echo=FALSE
-fit4 <- read_rds("../output/von_bertalanffy_normal_otol_4.rds")
+fit4 <- read_rds(here("output", "von_bertalanffy_normal_otol_4.rds"))
 
 #+ 
 summary(fit4)
@@ -215,10 +221,10 @@ fit5 <- brm(bf(vbgf_f,
             prior = kihnu,
             chains = chains,
             iter = 4000)
-write_rds(fit5, "../output/von_bertalanffy_normal_otol_5.rds")
+write_rds(fit5, here("output", "von_bertalanffy_normal_otol_5.rds"))
 
 #+ echo=FALSE
-fit5 <- read_rds("../output/von_bertalanffy_normal_otol_5.rds")
+fit5 <- read_rds(here("output", "von_bertalanffy_normal_otol_5.rds"))
 
 #+ 
 summary(fit5)

@@ -7,6 +7,12 @@ taavi
 library(tidyverse)
 library(viridis)
 library(brms)
+library(here)
+```
+
+    ## here() starts at /Users/taavi/Downloads/mudil
+
+``` r
 chains <- 4
 control_pars <- list(adapt_delta = 0.999)
 mudil <- read_csv("../output/andmed_otoliit.csv")
@@ -167,7 +173,7 @@ ggplot(data = mudil_ad, mapping = aes(x = age, y = tl)) +
 
 ![](analyse_otol_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
-Starting values for van bertalaffny model coefficients
+Starting values for van bertalaffny model coefficients.
 
 ``` r
 library(FSA)
@@ -182,11 +188,23 @@ unlist(svTypical)
 # Set up prior with suggested starting values using normal distribution
 ```
 
-Model with individual variance and different sd per age
+First model, individual variance and different sd per age Total length
+modeled by van bertalanffy
 
 ``` r
 vbgf_f <- tl ~ Linf * (1 - exp(-K * (age - t0)))
+```
+
+van bertalanffy model coefficients can vary by location and we take
+individual differences into account as random effect.s
+
+``` r
 vbgf_coefs_f <- Linf + K + t0 ~ location + (1 | id)
+```
+
+This is how brms default priors look like:
+
+``` r
 get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))), 
              vbgf_coefs_f, 
              sigma ~ age, nl = TRUE),
@@ -268,14 +286,16 @@ get_prior(bf(tl ~ Linf * (1 - exp(-K * (age - t0))),
     ## 35            
     ## 36
 
-Wiki says that adult gobis can be between 150 and 200 mm long, let’s
-take 200 as a prior fot tl
+We can set our own priors. Wiki says that adult gobis can be between 150
+and 200 mm long, let’s take 200 as a prior fot tl
 
 ``` r
 kihnu <- prior(normal(170, 35), nlpar = "Linf", lb = 0) +
   prior(normal(0.7, 0.2), nlpar = "K", lb = 0) +
   prior(normal(0.5, 0.2), nlpar = "t0")
 ```
+
+Fit location model:
 
 ``` r
 fit2 <- brm(bf(vbgf_f, 
@@ -378,10 +398,10 @@ p <- plot(marginal_effects(fit2, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
-Model single t0 for all locations Test if we can use common t0 for all
-locations
+Model with same t0 for all locations Test if we can use common t0 for
+all locations
 
 ``` r
 vbgf_coefs_f <- Linf + K ~ location + (1 | id)
@@ -476,7 +496,7 @@ p <- plot(marginal_effects(fit21, conditions = cond), points = TRUE, ask = FALSE
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 Compare models with location-specific t0 and common t0. Let’s use waic
 as loo complains about pareto.
@@ -567,7 +587,7 @@ p <- plot(marginal_effects(fit3, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
 
 Effect of location and sex Simple effects
 
@@ -678,7 +698,7 @@ p <- plot(marginal_effects(fit4, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
 
 With interaction
 
@@ -828,4 +848,4 @@ p <- plot(marginal_effects(fit5, conditions = cond), points = TRUE, ask = FALSE,
 p[[1]] + labs(x = "Age (year)", y = "Total length (mm)")
 ```
 
-![](analyse_otol_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+![](analyse_otol_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
